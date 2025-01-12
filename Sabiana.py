@@ -3,7 +3,7 @@ import pandas as pd
 import io
 
 def copier_donnees_easysel(sheet):
-    """Simule le comportement du VBA CopierDonneesEasysel."""
+    """Simule le comportement du VBA CopierDonneesEasysel"""
     # Recherche des mots-clés
     prix_conditions_index = sheet[sheet.iloc[:, 0] == "PREZZI E CONDIZIONI"].index
     total_index = sheet[sheet.iloc[:, 0] == "TOTAL"].index
