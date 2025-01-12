@@ -52,12 +52,14 @@ def modifier_tableau_easysel(df):
     # 5. Traitement des valeurs dans la colonne "Sous total" (ancienne colonne I)
     for i in df.index:
         # Vérifier si la valeur dans "Sous total" est une chaîne de caractères
-        valeur_col_I = df.at[i, "Sous total"]
-
+        valeur_col_I = df.at[i, "Col_9"]
         if pd.notna(valeur_col_I) and not str(valeur_col_I).isnumeric():
             # Si c'est une chaîne de caractères, copier en "Libellé" et mettre "T" en "Sous total"
             df.at[i, "Libellé"] = valeur_col_I  # Copier dans la colonne B ("Libellé")
             df.at[i, "Sous total"] = "T"        # Remplacer par "T" dans la colonne I
+
+    #Suppression de la colonne I
+    df.drop(df.columns[8], axis=1, inplace=True)
 
     # 6. Remplir les cellules vides avec des chaînes vides pour éviter les NaN
     df.fillna("", inplace=True)
