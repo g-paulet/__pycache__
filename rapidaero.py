@@ -1,27 +1,57 @@
+"""Module dev Rapidaero"""
+
 import io
+import traceback
 import pandas as pd
 import streamlit as st
-import traceback
 
-def copier_tableaux_rapid_aero(xls):
+
+def copier_tableaux_rapid_aero(excel_file):
     """ Copie les données des feuilles se terminant par '°C' """
-    liste_feuilles = xls.sheet_names  # Récupérer la liste des feuilles
+    liste_feuilles = excel_file.sheet_names  # Récupérer la liste des feuilles
     resultats = []
+    ligne_destination = 0
 
     for sheet_name in liste_feuilles:
         if sheet_name.endswith("°C"):
-            df = pd.read_excel(uploaded_file, sheet_name=0, header=0, engine="openpyxl")  # Lire avec un header
             st.write(f"Traitement de la feuille : {sheet_name}")  # Debugging
 
-            # Récupération des colonnes P, Q, R (15, 16, 17 en index)
-            if df.shape[1] > 17:  # Vérifier qu'on a assez de colonnes
-                extrait = df.iloc[1:, [15, 16, 17]].copy()
-                extrait.columns = ["P", "Q", "R"]
+            df = pd.read_excel(excel_file, sheet_name=sheet_name, header=None)
 
-                # Ajouter le titre de la feuille
-                extrait.insert(0, "Titre", f"Aérotherme - {sheet_name}")
+            # Vérifier que le fichier contient au moins 18 colonnes (jusqu'à la colonne R)
+            if df.shape[1] > 17:
+                # Trouver la dernière ligne utilisée dans la colonne P (colonne index 15)
+                dern_ligne = df.iloc[:, 15].last_valid_index()
 
+                if dern_ligne and dern_ligne >= 1:  # Vérifier qu'il y a bien des données
+                    print("Dernière ligne remplie en colonne P :", dern_ligne)
+
+                    # Extraction des colonnes P, Q, R à partir de la ligne 2
+                   # extrait = df.iloc[1:dern_ligne + 1, [15, 16, 17]].copy()
+                    #extrait.columns = ["P", "Q", "R"]
+
+                    # Ajouter le titre de la feuille
+                   # extrait.insert(0, "Titre", f"Aérotherme - {sheet_name}")
+
+                    # Ajouter au résultat final
+                    #resultats.append(extrait)
+                # Créer une liste vide pour stocker les données formatées
+                extrait_liste = []
+
+                #  **Ajouter le titre dans la première colonne (ligne actuelle)**
+                extrait_liste.append([f"Aérotherme - {sheet_name}"] + [""] * 2)  # Colonnes P, Q, R vides
+
+                #  **Ajouter les données à partir de la ligne suivante**
+                extrait_liste.extend(df.iloc[1:dern_ligne + 1, [15, 16, 17]].values.tolist())
+
+                # Convertir la liste en DataFrame pandas
+                extrait = pd.DataFrame(extrait_liste, columns=["P", "Q", "R"])
+
+                # Ajouter au résultat final
                 resultats.append(extrait)
+
+                # Mise à jour de la ligne de destination (incrémentation)
+                ligne_destination += len(extrait)
 
     if resultats:
         return pd.concat(resultats, ignore_index=True)
@@ -37,17 +67,34 @@ def mise_en_forme_rapid_aero(df):
     - Supprime les lignes vides.
     """
     print("Colonnes présentes dans df:", df.columns)  # Debugging
-    st.write("Colonnes détectées :", df.columns.tolist())
+    print(df) # Debugging
 
-    df.insert(2, "NouvelleCol", df[0])
-    df.drop(columns=[0], inplace=True)
-    df[8] = df[1].apply(lambda x: "T" if isinstance(x, str) and x.startswith("Aérotherme - ") else "")
-    columns = ["Code", "Libellé", "Qté", "", "", "", "", "", "Sous total"]
-    df.columns = columns
-    df.loc[-1] = columns  # Ajouter en première ligne
-    df.index = df.index + 1  # Décalage des index
-    df = df.sort_index()
-    df.dropna(subset=["Code", "Sous total"], how="all", inplace=True)
+    #Ajout des colonnes vides pour matcher la mise en forme Dollibar
+    #df.drop(df.columns[0], axis=1, inplace=True)
+    df.insert(3, "NouvelleCol1", "")
+    df.insert(3, "NouvelleCol2", "")
+    df.insert(3, "NouvelleCol3", "")
+    df.insert(3, "NouvelleCol4", "")
+    df.insert(3, "NouvelleCol5", "")
+    df.insert(3, "NouvelleCol6", "")
+
+    # Renommer correctement les colonnes + swap A et B
+    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" for i in range(df.shape[1] - 4)] + ["Sous total"]
+    df.columns = titres
+    df[["Code", "Libellé", "Qté"]] = df[["Libellé","Code", "Qté"]]
+
+    print("Colonnes dans le df :", titres)
+
+    # Ajouter "T" dans "sous-total" si "Aérotherme" est trouvé dans "Libellé"
+    df.loc[df["Libellé"].str.contains("Aérotherme", na=False), "Sous total"] = "T"
+
+    # Supprimer les lignes où les colonnes A et I sont vides
+    df = df[~(df["Code"].isna() | (df["Code"] == "")) |
+            ~(df["Sous total"].isna() | (df["Sous total"] == ""))]
+
+    # Remplir les cellules vides avec des chaînes vides pour éviter les NaN
+    # df.fillna("", inplace=True)
+
     return df
 
 # Interface Streamlit
@@ -57,12 +104,14 @@ if uploaded_file:
     try:
         st.info("Début du traitement du fichier...")
 
-        # Charger le fichier Excel en tant qu'objet ExcelFile
-        xls = pd.ExcelFile(uploaded_file, engine="openpyxl")
-        st.write("Feuilles disponibles :", xls.sheet_names)  # Afficher les noms des onglets
+        # Charger le fichier Excel pour récupérer les noms des feuilles
+        excel_file = pd.ExcelFile(uploaded_file)
+
+        # Afficher les feuilles disponibles
+        # st.write("Feuilles disponibles :", excel_file.sheet_names)
 
         # Étape 1 : Copier les données
-        donnees = copier_tableaux_rapid_aero(xls)  # Passer l'objet ExcelFile et non un DataFrame
+        donnees = copier_tableaux_rapid_aero(excel_file)
 
         if donnees is None or donnees.empty:
             st.error("Aucune donnée extraite. Vérifiez le contenu du fichier.")
