@@ -17,27 +17,71 @@ def lettre_en_index(lettre):
 
 # Fonction pour traiter les données de l'onglet PULSAR
 def traiter_pulsar(df_source, df_export):
-    """Applique les transformations définies pour l'onglet PULSAR et ajoute les résultats à df_export"""
-    
-    # Vérification de l'existence des colonnes attendues
-    if "I" not in df_source.columns or "Sous total" not in df_source.columns:
-        st.error("Erreur : L'onglet 'PULSAR' ne contient pas les colonnes attendues.")
-        return df_export
+    # 🔹 Définir les colonnes cibles (doivent être identiques à df_export)
+    colonnes_cibles = ["Code Produit", "Libellé", "Quantité"]
 
-    # Copier les valeurs de la colonne I en colonne B si ce sont des chaînes de caractères
-    df_source["B"] = df_source["I"].where(df_source["I"].apply(lambda x: isinstance(x, str)), df_source["B"])
+    # 🔹 Initialisation d'une liste pour stocker les données
+    lignes_pulsar = []
 
-    # Déplacer la colonne "Sous total" en colonne I (au lieu de J)
-    if "Sous total" in df_source.columns:
-        df_source.insert(8, "I", df_source.pop("Sous total"))
+    titres_exportes = set()
+    dernier_titre = ""
 
-    # Ajouter la lettre "T" en colonne I uniquement si une chaîne de caractères est en colonne B
-    df_source["I"] = df_source.apply(lambda row: "T" if isinstance(row["B"], str) else row["I"], axis=1)
+    # Utilisation des indices numériques pour éviter les erreurs de colonnes
+    col_titre = 0   # Colonne A
+    col_quantite = 1 # Colonne B
+    col_type = 2     # Colonne C
+    col_position = 3 # Colonne D
+    col_ref = 14     # Colonne O
 
-    # Ajouter les données transformées au fichier d'export
-    df_export = pd.concat([df_export, df_source], ignore_index=True)
+    # 🔹 1. Traitement par titre (Plage A15:A41)
+    for i, row in df_source.iloc[14:41].iterrows():
+        if pd.notna(row.iloc[col_titre]):  # Vérifier si la cellule A contient un titre
+            dernier_titre = row.iloc[col_titre]
+            
+            if dernier_titre not in titres_exportes:
+                titres_exportes.add(dernier_titre)
+                lignes_pulsar.append([dernier_titre, "", ""])  # Ajout du titre
+
+        if dernier_titre != "":
+            quantite = row.iloc[col_quantite]
+            if pd.notna(quantite):
+                type_valeur = row.iloc[col_type]
+                position = row.iloc[col_position]
+                reference_valeur = row.iloc[col_ref]
+                
+                libelle = f"{type_valeur} {position}" if pd.notna(type_valeur) and pd.notna(position) else ""
+                lignes_pulsar.append([reference_valeur, libelle, quantite])
+
+    # 🔹 2. Cas sans titre en colonne A (Plage O15:O41)
+    if dernier_titre == "":
+        for i, row in df_source.iloc[14:41].iterrows():
+            reference_valeur = row.iloc[col_ref]
+            if pd.notna(reference_valeur):
+                quantite = row.iloc[col_quantite]
+                if pd.notna(quantite):
+                    type_valeur = row.iloc[col_type]
+                    position = row.iloc[col_position]
+
+                    libelle = f"{type_valeur} {position}" if pd.notna(type_valeur) and pd.notna(position) else ""
+                    lignes_pulsar.append([reference_valeur, libelle, quantite])
+
+    # 🔹 3. Traitement des options/accessoires (Plage A47:O69)
+    if lignes_pulsar:
+        lignes_pulsar.append(["", "", ""])  # Ligne vide pour séparer
+        lignes_pulsar.append(["Accessoires PULSAR", "", ""])
+
+    for i, row in df_source.iloc[46:69].iterrows():
+        if pd.notna(row.iloc[col_titre]):  # Vérifier si la cellule contient un code produit
+            lignes_pulsar.append([row.iloc[col_titre], "", row.iloc[col_ref]])  # Code produit + quantité
+
+    # 🔹 Convertir la liste en DataFrame avec les bonnes colonnes
+    df_pulsar = pd.DataFrame(lignes_pulsar, columns=colonnes_cibles)
+
+    # 🔹 **Concaténer les résultats** sans décaler les colonnes
+    df_export = pd.concat([df_export, df_pulsar], ignore_index=True)
 
     return df_export
+
 
 
 def traiter_ds18(df_source, df_export):
@@ -97,6 +141,7 @@ def traiter_ds18(df_source, df_export):
 
 
 # Interface Streamlit
+st.image("sabiana-logo.png", use_container_width=True)
 st.title("Exportation des données PULSAR & DS18")
 
 # Upload du fichier source
