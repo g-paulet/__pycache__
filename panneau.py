@@ -1,112 +1,136 @@
-from io import BytesIO
 import streamlit as st
-from openpyxl import load_workbook, Workbook
+import pandas as pd
+import io
 
-def exporter_donnees_pulsar(wb_source):
+
+def lettre_en_index(lettre):
     """
-    Exporte les données du produit PULSAR ainsi que les options/accessoires
-    depuis le fichier Excel chargé par l'utilisateur.
+    Convertit une référence de colonne sous forme de lettres (ex: 'A', 'Z', 'AA') 
+    en un index numérique pour Pandas.
     """
+    index = 0
+    for char in lettre:
+        index *= 26
+        index += ord(char.upper()) - ord('A') + 1
+    return index - 1  # Ajuste l'index pour correspondre aux indices Python (commence à 0)
 
-    # Vérifier l'existence de l'onglet "PULSAR"
-    if "PULSAR" not in wb_source.sheetnames:
-        st.error("Erreur : L'onglet 'PULSAR' n'existe pas dans le fichier.")
-        return None
 
-    ws_source = wb_source["PULSAR"]
+# Fonction pour traiter les données de l'onglet PULSAR
+def traiter_pulsar(df_source, df_export):
+    """Applique les transformations définies pour l'onglet PULSAR et ajoute les résultats à df_export"""
+    
+    # Vérification de l'existence des colonnes attendues
+    if "I" not in df_source.columns or "Sous total" not in df_source.columns:
+        st.error("Erreur : L'onglet 'PULSAR' ne contient pas les colonnes attendues.")
+        return df_export
 
-    # Création du fichier destination
-    wb_destination = Workbook()
-    ws_destination = wb_destination.active
-    ws_destination.title = "Données Copiées"
+    # Copier les valeurs de la colonne I en colonne B si ce sont des chaînes de caractères
+    df_source["B"] = df_source["I"].where(df_source["I"].apply(lambda x: isinstance(x, str)), df_source["B"])
 
-    # Initialisation d'un dictionnaire pour suivre les titres exportés
-    titres_exportes = {}
+    # Déplacer la colonne "Sous total" en colonne I (au lieu de J)
+    if "Sous total" in df_source.columns:
+        df_source.insert(8, "I", df_source.pop("Sous total"))
 
-    # Parcourir la plage A15:A41
-    dernier_titre = ""
-    ligne_destination = 1
+    # Ajouter la lettre "T" en colonne I uniquement si une chaîne de caractères est en colonne B
+    df_source["I"] = df_source.apply(lambda row: "T" if isinstance(row["B"], str) else row["I"], axis=1)
 
-    for row in range(15, 42):  # Lignes 15 à 41
-        cell_value = ws_source[f"A{row}"].value  # Colonne A
-        if cell_value:
-            dernier_titre = cell_value
-            if dernier_titre not in titres_exportes:
-                titres_exportes[dernier_titre] = True
-                ws_destination[f"B{ligne_destination}"] = dernier_titre
-                ligne_destination += 1
+    # Ajouter les données transformées au fichier d'export
+    df_export = pd.concat([df_export, df_source], ignore_index=True)
 
-        if dernier_titre:
-            quantite = ws_source[f"B{row}"].value  # Colonne B
-            if quantite:
-                type_valeur = ws_source[f"C{row}"].value  # Colonne C
-                position = ws_source[f"D{row}"].value  # Colonne D
-                reference_valeur = ws_source[f"O{row}"].value  # Colonne O
+    return df_export
 
-                # Insérer les données dans la feuille destination
-                ws_destination[f"A{ligne_destination}"] = str(reference_valeur)  # Stocké en texte
-                if type_valeur and position:
-                    ws_destination[f"B{ligne_destination}"] = f"{type_valeur} {position}"
-                ws_destination[f"C{ligne_destination}"] = quantite
-                ligne_destination += 1
 
-    # Cas où il n'y a pas de titre en colonne A
-    if not dernier_titre:
-        for row in range(15, 42):
-            reference_valeur = ws_source[f"O{row}"].value  # Colonne O
-            if reference_valeur:
-                quantite = ws_source[f"B{row}"].value  # Colonne B
-                if quantite:
-                    type_valeur = ws_source[f"C{row}"].value  # Colonne C
-                    position = ws_source[f"D{row}"].value  # Colonne D
+def traiter_ds18(df_source, df_export):
+    """Extrait et formate les données de l'onglet DS18 pour les ajouter au fichier de sortie"""
+    
+    if df_source is None:
+        st.error("Erreur : L'onglet 'DS18' n'existe pas dans le fichier source.")
+        return df_export
 
-                    # Insérer les données
-                    ws_destination[f"A{ligne_destination}"] = str(reference_valeur)
-                    if type_valeur and position:
-                        ws_destination[f"B{ligne_destination}"] = f"{type_valeur} {position}"
-                    ws_destination[f"C{ligne_destination}"] = quantite
-                    ligne_destination += 1
+    # Liste des types, colonnes de quantités et colonnes codes correspondantes
+    types = ["PanneauComplet", "PanneauFirst", "PanneauIntermédiaire", "PanneauFinal", 
+             "CapotEntree", "CapotInter", "CapotFinal", "Jonction", "Travail", "CacheTube"]
+    cols_quantite = ["AR", "AZ", "BH", "BP", "BY", "CA", "CC", "CE", "CH", "CJ"]
+    cols_code = ["AS", "BA", "BI", "BQ", "BZ", "CB", "CD", "CF", "CI", "CK"]
 
-    # Traitement des données de la section "Options / Accessoires"
-    ligne_depart = ligne_destination + 2
-    ws_destination[f"B{ligne_depart - 1}"] = "Accessoires PULSAR"
-    ws_destination[f"I{ligne_depart - 1}"] = "T"
+    # Conversion en indices numériques
+    cols_quantite_indices = [lettre_en_index(col) for col in cols_quantite]
+    cols_code_indices = [lettre_en_index(col) for col in cols_code]
 
-    for row in range(47, 70):  # Lignes 47 à 69
-        code = ws_source[f"A{row}"].value  # Colonne A
-        if code:
-            quantite = ws_source[f"O{row}"].value  # Colonne O
-            ws_destination[f"A{ligne_depart}"] = code
-            ws_destination[f"C{ligne_depart}"] = quantite
-            ligne_depart += 1
+    # Liste pour stocker les nouvelles lignes avant concaténation
+    nouvelles_lignes = []
 
-    return wb_destination
+    # Traitement des panneaux DS18 (lignes 15 à 44)
+    for i in range(14, 44):  # Indices commencent à 0 en Python
+        # Vérifier que les cellules B, C et D ne sont pas vides
+        if pd.notna(df_source.iloc[i, 1]) and pd.notna(df_source.iloc[i, 2]) and pd.notna(df_source.iloc[i, 3]):
+            titre = f"{df_source.iloc[i, 1]}x {df_source.iloc[i, 2]} de {df_source.iloc[i, 3]}m"
+            nouvelles_lignes.append({"Code Produit": "", "Libellé": titre, "Quantité": ""})
+            
+            # Parcourir les types et copier les données associées
+            for j in range(len(types)):
+                quantite = df_source.iloc[i, cols_quantite_indices[j]]  # Accès à la colonne de quantités
+                code = df_source.iloc[i, cols_code_indices[j]]  # Accès à la colonne de codes
+                libelle = types[j]
+
+                # Vérifier si la quantité et le code sont valides
+                if pd.notna(quantite) and quantite != 0 and pd.notna(code):
+                    nouvelles_lignes.append({"Code Produit": code, "Libellé": libelle, "Quantité": quantite})
+
+    # Traitement des accessoires DS18 (lignes 50 à 79)
+    nouvelles_lignes.append({"Code Produit": "", "Libellé": "Accessoires DS18", "Quantité": "T"})
+
+    for i in range(49, 79):
+        if pd.notna(df_source.iloc[i, 0]):
+            code = df_source.iloc[i, 0]
+            libelle = df_source.iloc[i, 1] if pd.notna(df_source.iloc[i, 1]) else ""
+            quantite = df_source.iloc[i, 15] if pd.notna(df_source.iloc[i, 15]) else ""
+
+            nouvelles_lignes.append({"Code Produit": code, "Libellé": libelle, "Quantité": quantite})
+
+    # Concaténation avec le DataFrame export
+    df_export = pd.concat([df_export, pd.DataFrame(nouvelles_lignes)], ignore_index=True)
+
+    return df_export
+
+
 
 
 # Interface Streamlit
-st.title("Exportation des données PULSAR")
+st.title("Exportation des données PULSAR & DS18")
 
+# Upload du fichier source
 uploaded_file = st.file_uploader("Choisissez un fichier Excel", type=["xlsx", "xlsm"])
-
 if uploaded_file:
-    # Charger le fichier Excel dans OpenPyXL
-    wb_source = load_workbook(uploaded_file, data_only=True)
+    # Lecture du fichier source
+    xl = pd.ExcelFile(uploaded_file)
+    
+    # Chargement des onglets PULSAR et DS18 s'ils existent
+    df_pulsar = xl.parse("PULSAR") if "PULSAR" in xl.sheet_names else None
+    df_ds18 = xl.parse("DS18") if "DS18" in xl.sheet_names else None
 
-    # Traiter les données
-    wb_result = exporter_donnees_pulsar(wb_source)
+    # Création du DataFrame de sortie
+    df_export = pd.DataFrame(columns=["Code Produit", "Libellé", "Quantité"])
 
-    if wb_result:
-        # Sauvegarder en mémoire
-        output = BytesIO()
-        wb_result.save(output)
-        output.seek(0)
+    # Traitement des données de PULSAR
+    if df_pulsar is not None:
+        df_export = traiter_pulsar(df_pulsar, df_export)
 
-        # Bouton de téléchargement
-        st.download_button(
-            label="Télécharger le fichier transformé",
-            data=output,
-            file_name="donnees_pulsar.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    # Traitement des données de DS18
+    if df_ds18 is not None:
+        df_export = traiter_ds18(df_ds18, df_export)
 
-        st.success("Traitement terminé ! Vous pouvez télécharger le fichier.")
+    # Génération du fichier Excel de sortie
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df_export.to_excel(writer, sheet_name="Données Exportées", index=False)
+
+    st.success("Traitement terminé ! Téléchargez votre fichier ci-dessous.")
+
+    # Bouton de téléchargement
+    st.download_button(
+        label="Télécharger le fichier Excel",
+        data=output.getvalue(),
+        file_name="export_donnees.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
