@@ -84,24 +84,29 @@ def identifier_fichier(nom_fichier):
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
-    
-    elif "Offerta" in nom_fichier:
+    elif "offerta" in nom_fichier:
         st.write("Fichier détecté : Easysel")
-                
-        # Module issu de easysel.py pour le traitement de données
+           
+        # Module issu de Sabiana.py pour le traitement de données
         if uploaded_file:
             try:
+                # Charger le fichier Excel
                 sheet = pd.read_excel(uploaded_file, sheet_name=0, header=None)
+
+                # Étape 1 : Copier les données
                 st.info("Traitement des données en cours...")
                 donnees = copier_donnees_easysel(sheet)
 
                 if donnees is not None:
+                    # Étape 2 : Modifier le tableau
                     resultat = modifier_tableau_easysel(donnees)
-                    st.success("Traitement terminé ! Téléchargez le fichier ci-dessous :")
 
+                    # Télécharger le fichier traité
+                    st.success("Traitement terminé ! Téléchargez le fichier ci-dessous :")
+                    # Création d'un tampon en mémoire
                     buffer = io.BytesIO()
                     resultat.to_excel(buffer, index=False, engine="openpyxl")
-                    buffer.seek(0)
+                    buffer.seek(0)  # Remet le curseur au début du fichier
 
                     st.download_button(
                         label="📥 Télécharger le fichier Excel",
@@ -111,7 +116,6 @@ def identifier_fichier(nom_fichier):
                     )
             except Exception as e:
                 st.error(f"Une erreur est survenue : {e}")
-        
     
     elif "Rapid'Aero" in nom_fichier:
         st.write("Fichier détecté : Rapid'Aero")
@@ -158,6 +162,7 @@ def identifier_fichier(nom_fichier):
     else:
         st.error("Le classeur sélectionné ne semble pas correspondre à un fichier Easysel, Rapid'Aero ou Panneau. Merci de sélectionner un fichier valide.")
 
+#Interface Streamlit
 st.image("sabiana-logo.png", use_container_width=True)
 st.title("Outil de conversion des fichiers de sélection vers Magenta")
 st.subheader("Déposez votre fichier Excel ci-dessous :")

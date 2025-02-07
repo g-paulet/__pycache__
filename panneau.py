@@ -169,75 +169,8 @@ def modifier_tableau_panneau(df_export):
 
 
 # Interface Streamlit
-st.image("sabiana-logo.png", use_container_width=True)
-st.title("Exportation des données PULSAR & DS18")
+#st.image("sabiana-logo.png", use_container_width=True)
+#st.title("Exportation des données PULSAR & DS18")
 
 # Upload du fichier source
-uploaded_file = st.file_uploader("Choisissez un fichier Excel", type=["xlsx", "xlsm"])
-
-
-if uploaded_file:
-    # Lecture du fichier source
-    xl = pd.ExcelFile(uploaded_file)
-    
-    # Chargement des onglets PULSAR et DS18 s'ils existent
-    df_pulsar = xl.parse("PULSAR") if "PULSAR" in xl.sheet_names else None
-    df_ds18 = xl.parse("DS18") if "DS18" in xl.sheet_names else None
-
-    # Création du DataFrame de sortie
-    df_export = pd.DataFrame(columns=["Code Produit", "Libellé", "Quantité"])
-
-    # Traitement des données de PULSAR
-    if df_pulsar is not None:
-        df_export = traiter_pulsar(df_pulsar, df_export)
-
-    # Traitement des données de DS18
-    if df_ds18 is not None:
-        df_export = traiter_ds18(df_ds18, df_export)
-
-    # Mise en forme du dataframe
-    df_export = modifier_tableau_panneau(df_export)
-
-    # Génération du fichier Excel de sortie
-    output = io.BytesIO()
-  
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df_export.to_excel(writer, sheet_name="Données Exportées", index=False)
-
-        # Mise en forme des lignes de titre en Gras + centrer colonne A
-        # Récupérer le workbook et le worksheet
-        workbook = writer.book
-        worksheet = writer.sheets["Données Exportées"]
-
-        # Définir un format en gras
-        bold_format = workbook.add_format({"bold": True})
-        
-        # Trouver les lignes où "Sous total" contient "T"
-        for row_num, value in enumerate(df_export["Sous total"], start=1):  # start=1 car Excel commence à la ligne 2
-            if value == "T":
-                worksheet.set_row(row_num, cell_format=bold_format)  # Mettre la ligne en gras
-
-        # Définir un format centré pour la colonne "Code"
-        center_format = workbook.add_format({"align": "center", "valign": "vcenter"})  # alignement horizontal et vertical
-
-        # Appliquer l'alignement centré sur toute la colonne "Code"
-        #col_index_code = df_export.columns.get_loc("Code")  # Trouver l'index de la colonne "Code"
-        worksheet.set_column(0, 0, 15, center_format)  # Centrer le texte dans la colonne A (Code) et ajuster la largeur à 15
-        
-        # Ajustement automatique des largeurs de colonnes
-        for col_num, col_name in enumerate(df_export.columns):
-            max_len = df_export[col_name].astype(str).map(len).max()  # Trouver la longueur maximale
-            worksheet.set_column(col_num, col_num, max_len + 2)  # Ajouter un peu d'espace
-
-        # Sauvegarder
-        writer._save()
-
-    st.success("Traitement terminé ! Téléchargez votre fichier ci-dessous.")
-
-    # Bouton de téléchargement
-    st.download_button(
-        label="Télécharger le fichier Excel",
-        data=output.getvalue(),
-        file_name="export_donnees.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
+#uploaded_file = st.file_uploader("Choisissez un fichier Excel", type=["xlsx", "xlsm"])
