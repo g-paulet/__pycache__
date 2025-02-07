@@ -174,6 +174,8 @@ st.title("Exportation des données PULSAR & DS18")
 
 # Upload du fichier source
 uploaded_file = st.file_uploader("Choisissez un fichier Excel", type=["xlsx", "xlsm"])
+
+
 if uploaded_file:
     # Lecture du fichier source
     xl = pd.ExcelFile(uploaded_file)
