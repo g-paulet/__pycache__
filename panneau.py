@@ -122,7 +122,7 @@ def traiter_ds18(df_source, df_export):
                     nouvelles_lignes.append({"Code Produit": code, "Libellé": libelle, "Quantité": quantite})
 
     # Traitement des accessoires DS18 (lignes 50 à 79)
-    nouvelles_lignes.append({"Code Produit": "", "Libellé": "Accessoires DS18", "Quantité": "T"})
+    nouvelles_lignes.append({"Code Produit": "", "Libellé": "Accessoires DS18", "Quantité": ""})
 
     for i in range(48, 79):
         if pd.notna(df_source.iloc[i, 0]):
@@ -138,6 +138,34 @@ def traiter_ds18(df_source, df_export):
     return df_export
 
 
+def modifier_tableau_panneau(df_export):
+    """Mise en forme du dataframe."""
+
+    # 1. S'assurer que le DataFrame a au moins 9 colonnes
+    while df_export.shape[1] < 9:
+        df_export[f'Col_{df_export.shape[1] + 1}'] = ""
+
+    # 2. Ajouter les titres
+    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" for i in range(df_export.shape[1] - 4)] + ["Sous total"]
+    df_export.columns = titres[:df_export.shape[1]]  # Ajuster les titres sans erreur d'index
+
+    # 3a Supprimer les lignes où les colonnes A et B sont vides
+    df_export = df_export[~(df_export["Code"].isna() | (df_export["Code"] == "")) |
+            ~(df_export["Libellé"].isna() | (df_export["Libellé"] == ""))]
+    # 3b Supprimer les lignes où les colonnes B et C sont vides
+    df_export = df_export[~(df_export["Qté"].isna() | (df_export["Qté"] == "")) |
+            ~(df_export["Libellé"].isna() | (df_export["Libellé"] == ""))]
+
+    # 4. Ajout de "T" en colonne "Sous total" si SEUL "Libellé" contient une donnée
+    if "Sous total" in df_export.columns:
+        for i, row in df_export.iterrows():
+            if pd.notna(row["Libellé"]) and (pd.isna(row["Code"]) or row["Code"] == "") and (pd.isna(row["Qté"]) or row["Qté"] == ""):
+                df_export.at[i, "Sous total"] = "T"
+
+    # Remplacement des NaN par ""
+    df_export.fillna("", inplace=True)
+
+    return df_export
 
 
 # Interface Streamlit
@@ -165,10 +193,42 @@ if uploaded_file:
     if df_ds18 is not None:
         df_export = traiter_ds18(df_ds18, df_export)
 
+    # Mise en forme du dataframe
+    df_export = modifier_tableau_panneau(df_export)
+
     # Génération du fichier Excel de sortie
     output = io.BytesIO()
+  
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         df_export.to_excel(writer, sheet_name="Données Exportées", index=False)
+
+        # Mise en forme des lignes de titre en Gras + centrer colonne A
+        # Récupérer le workbook et le worksheet
+        workbook = writer.book
+        worksheet = writer.sheets["Données Exportées"]
+
+        # Définir un format en gras
+        bold_format = workbook.add_format({"bold": True})
+        
+        # Trouver les lignes où "Sous total" contient "T"
+        for row_num, value in enumerate(df_export["Sous total"], start=1):  # start=1 car Excel commence à la ligne 2
+            if value == "T":
+                worksheet.set_row(row_num, cell_format=bold_format)  # Mettre la ligne en gras
+
+        # Définir un format centré pour la colonne "Code"
+        center_format = workbook.add_format({"align": "center", "valign": "vcenter"})  # alignement horizontal et vertical
+
+        # Appliquer l'alignement centré sur toute la colonne "Code"
+        #col_index_code = df_export.columns.get_loc("Code")  # Trouver l'index de la colonne "Code"
+        worksheet.set_column(0, 0, 15, center_format)  # Centrer le texte dans la colonne A (Code) et ajuster la largeur à 15
+        
+        # Ajustement automatique des largeurs de colonnes
+        for col_num, col_name in enumerate(df_export.columns):
+            max_len = df_export[col_name].astype(str).map(len).max()  # Trouver la longueur maximale
+            worksheet.set_column(col_num, col_num, max_len + 2)  # Ajouter un peu d'espace
+
+        # Sauvegarder
+        writer._save()
 
     st.success("Traitement terminé ! Téléchargez votre fichier ci-dessous.")
 
