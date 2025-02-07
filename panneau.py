@@ -40,7 +40,7 @@ def traiter_pulsar(df_source, df_export):
             
             if dernier_titre not in titres_exportes:
                 titres_exportes.add(dernier_titre)
-                lignes_pulsar.append([dernier_titre, "", ""])  # Ajout du titre
+                lignes_pulsar.append(["", dernier_titre, ""])  # Ajout du titre
 
         if dernier_titre != "":
             quantite = row.iloc[col_quantite]
@@ -68,9 +68,9 @@ def traiter_pulsar(df_source, df_export):
     # 🔹 3. Traitement des options/accessoires (Plage A47:O69)
     if lignes_pulsar:
         lignes_pulsar.append(["", "", ""])  # Ligne vide pour séparer
-        lignes_pulsar.append(["Accessoires PULSAR", "", ""])
+        lignes_pulsar.append(["", "Accessoires PULSAR", ""])
 
-    for i, row in df_source.iloc[46:69].iterrows():
+    for i, row in df_source.iloc[45:69].iterrows():
         if pd.notna(row.iloc[col_titre]):  # Vérifier si la cellule contient un code produit
             lignes_pulsar.append([row.iloc[col_titre], "", row.iloc[col_ref]])  # Code produit + quantité
 
@@ -105,7 +105,7 @@ def traiter_ds18(df_source, df_export):
     nouvelles_lignes = []
 
     # Traitement des panneaux DS18 (lignes 15 à 44)
-    for i in range(14, 44):  # Indices commencent à 0 en Python
+    for i in range(13, 44):  # Indices commencent à 0 en Python
         # Vérifier que les cellules B, C et D ne sont pas vides
         if pd.notna(df_source.iloc[i, 1]) and pd.notna(df_source.iloc[i, 2]) and pd.notna(df_source.iloc[i, 3]):
             titre = f"{df_source.iloc[i, 1]}x {df_source.iloc[i, 2]} de {df_source.iloc[i, 3]}m"
@@ -124,7 +124,7 @@ def traiter_ds18(df_source, df_export):
     # Traitement des accessoires DS18 (lignes 50 à 79)
     nouvelles_lignes.append({"Code Produit": "", "Libellé": "Accessoires DS18", "Quantité": "T"})
 
-    for i in range(49, 79):
+    for i in range(48, 79):
         if pd.notna(df_source.iloc[i, 0]):
             code = df_source.iloc[i, 0]
             libelle = df_source.iloc[i, 1] if pd.notna(df_source.iloc[i, 1]) else ""
