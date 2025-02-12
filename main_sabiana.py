@@ -169,7 +169,8 @@ def identifier_fichier(nom_fichier):
 #Interface Streamlit
 st.image("sabiana-logo.png", use_container_width=True)
 st.title("Outil de conversion des fichiers de sélection vers Magenta")
-st.subheader("Déposez votre fichier Excel ci-dessous :")
+st.subheader("Déposez votre fichier Excel ci-dessous \
+    (issu des outils de sélection : Easysel, Rapid'Aéro ou Panneau)")
 
 uploaded_file = st.file_uploader("Choisissez un fichier Excel", type=["xlsx", "xlsm"])
 
