@@ -21,7 +21,7 @@ def identifier_fichier(nom_fichier):
         if uploaded_file:
             # Lecture du fichier source
             xl = pd.ExcelFile(uploaded_file)
-            
+
             # Chargement des onglets PULSAR et DS18 s'ils existent
             df_pulsar = xl.parse("PULSAR") if "PULSAR" in xl.sheet_names else None
             df_ds18 = xl.parse("DS18") if "DS18" in xl.sheet_names else None
@@ -42,7 +42,7 @@ def identifier_fichier(nom_fichier):
 
             # Génération du fichier Excel de sortie
             output = io.BytesIO()
-        
+
             with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
                 df_export.to_excel(writer, sheet_name="Données Exportées", index=False)
 
@@ -53,22 +53,28 @@ def identifier_fichier(nom_fichier):
 
                 # Définir un format en gras
                 bold_format = workbook.add_format({"bold": True})
-                
+
                 # Trouver les lignes où "Sous total" contient "T"
-                for row_num, value in enumerate(df_export["Sous total"], start=1):  # start=1 car Excel commence à la ligne 2
+                # start=1 car Excel commence à la ligne 2
+                for row_num, value in enumerate(df_export["Sous total"], start=1):
                     if value == "T":
-                        worksheet.set_row(row_num, cell_format=bold_format)  # Mettre la ligne en gras
+                        # Mettre la ligne en gras
+                        worksheet.set_row(row_num, cell_format=bold_format)
 
                 # Définir un format centré pour la colonne "Code"
-                center_format = workbook.add_format({"align": "center", "valign": "vcenter"})  # alignement horizontal et vertical
+                # Alignement horizontal et vertical
+                center_format = workbook.add_format({"align": "center", "valign": "vcenter"})
 
                 # Appliquer l'alignement centré sur toute la colonne "Code"
-                #col_index_code = df_export.columns.get_loc("Code")  # Trouver l'index de la colonne "Code"
-                worksheet.set_column(0, 0, 15, center_format)  # Centrer le texte dans la colonne A (Code) et ajuster la largeur à 15
-                
+                #col_index_code = df_export.columns.get_loc("Code")
+                # Trouver l'index de la colonne "Code"
+                # Centrer le texte dans la colonne A (Code) et ajuster la largeur à 15
+                worksheet.set_column(0, 0, 15, center_format)
+
                 # Ajustement automatique des largeurs de colonnes
                 for col_num, col_name in enumerate(df_export.columns):
-                    max_len = df_export[col_name].astype(str).map(len).max()  # Trouver la longueur maximale
+                    # Trouver la longueur maximale
+                    max_len = df_export[col_name].astype(str).map(len).max()
                     worksheet.set_column(col_num, col_num, max_len + 2)  # Ajouter un peu d'espace
 
                 # Sauvegarder
@@ -86,7 +92,7 @@ def identifier_fichier(nom_fichier):
 
     elif "offerta" in nom_fichier:
         st.write("Fichier détecté : Easysel")
-           
+
         # Module issu de Sabiana.py pour le traitement de données
         if uploaded_file:
             try:
@@ -116,7 +122,7 @@ def identifier_fichier(nom_fichier):
                     )
             except Exception as e:
                 st.error(f"Une erreur est survenue : {e}")
-    
+
     elif "Rapid'Aero" in nom_fichier:
         st.write("Fichier détecté : Rapid'Aero")
 
@@ -156,11 +162,9 @@ def identifier_fichier(nom_fichier):
             except Exception as e:
                 st.error(f"Une erreur est survenue : {str(e)}")
                 st.text(traceback.format_exc())  # Affiche le détail de l'erreur
-
-
-
     else:
-        st.error("Le classeur sélectionné ne semble pas correspondre à un fichier Easysel, Rapid'Aero ou Panneau. Merci de sélectionner un fichier valide.")
+        st.error("Le classeur sélectionné ne semble pas correspondre à un fichier Easysel," \
+            "Rapid'Aero ou Panneau. Merci de sélectionner un fichier valide.")
 
 #Interface Streamlit
 st.image("sabiana-logo.png", use_container_width=True)

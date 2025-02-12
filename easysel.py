@@ -1,4 +1,5 @@
-import io
+"""Module de traitement des fichiers Easysel"""
+
 import streamlit as st
 import pandas as pd
 
@@ -46,7 +47,8 @@ def modifier_tableau_easysel(df):
     df.insert(1, 'Libellé', "")  # Nouvelle colonne vide en B
 
     # 4. Renommer correctement les colonnes
-    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" for i in range(df.shape[1] - 4)] + ["Sous total"]
+    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" for \
+        i in range(df.shape[1] - 4)] + ["Sous total"]
     df.columns = titres
 
     # 5. Traitement des valeurs dans la colonne "Sous total" (ancienne colonne I)

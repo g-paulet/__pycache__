@@ -1,7 +1,5 @@
 """Module dev Rapidaero"""
 
-import io
-import traceback
 import pandas as pd
 import streamlit as st
 
@@ -39,7 +37,8 @@ def copier_tableaux_rapid_aero(excel_file):
                 extrait_liste = []
 
                 #  **Ajouter le titre dans la première colonne (ligne actuelle)**
-                extrait_liste.append([f"Aérotherme - {sheet_name}"] + [""] * 2)  # Colonnes P, Q, R vides
+                # Colonnes P, Q, R vides
+                extrait_liste.append([f"Aérotherme - {sheet_name}"] + [""] * 2)
 
                 #  **Ajouter les données à partir de la ligne suivante**
                 extrait_liste.extend(df.iloc[1:dern_ligne + 1, [15, 16, 17]].values.tolist())
@@ -66,8 +65,8 @@ def mise_en_forme_rapid_aero(df):
     - Ajoute des titres,
     - Supprime les lignes vides.
     """
-    print("Colonnes présentes dans df:", df.columns)  # Debugging
-    print(df) # Debugging
+    #print("Colonnes présentes dans df:", df.columns)  # Debugging
+    #print(df) # Debugging
 
     #Ajout des colonnes vides pour matcher la mise en forme Dollibar
     #df.drop(df.columns[0], axis=1, inplace=True)
@@ -79,7 +78,8 @@ def mise_en_forme_rapid_aero(df):
     df.insert(3, "NouvelleCol6", "")
 
     # Renommer correctement les colonnes + swap A et B
-    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" for i in range(df.shape[1] - 4)] + ["Sous total"]
+    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" for i in range(df.shape[1] - 4)] \
+        + ["Sous total"]
     df.columns = titres
     df[["Code", "Libellé", "Qté"]] = df[["Libellé","Code", "Qté"]]
 
@@ -96,4 +96,4 @@ def mise_en_forme_rapid_aero(df):
     # df.fillna("", inplace=True)
 
     return df
-
+# End-of-file (EOF)
