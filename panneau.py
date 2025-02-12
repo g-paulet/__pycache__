@@ -118,7 +118,7 @@ def traiter_ds18(df_source, df_export):
             nouvelles_lignes.append({"Code Produit": "", "Libellé": titre, "Quantité": ""})
 
             # Parcourir les types et copier les données associées
-            for libelle, j in enumerate(types):
+            for j, libelle in enumerate(types):
                 # Accès à la colonne de quantités
                 quantite = df_source.iloc[i, cols_quantite_indices[j]]
                 # Accès à la colonne de codes

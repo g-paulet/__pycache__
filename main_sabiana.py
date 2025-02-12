@@ -143,7 +143,7 @@ def identifier_fichier(nom_fichier):
                 if donnees is None or donnees.empty:
                     st.error("Aucune donnée extraite. Vérifiez le contenu du fichier.")
                 else:
-                    st.write("Colonnes après extraction :", donnees.columns)
+                    #st.write("Colonnes après extraction :", donnees.columns) #Debug
 
                     # Étape 2 : Mise en forme
                     resultat = mise_en_forme_rapid_aero(donnees)
