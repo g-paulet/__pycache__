@@ -150,14 +150,13 @@ def traiter_ds18(df_source, df_export):
 def modifier_tableau_panneau(df_export):
     """Mise en forme du dataframe."""
 
-    # 1. S'assurer que le DataFrame a au moins 9 colonnes
-    while df_export.shape[1] < 9:
+    # 1. S'assurer que le DataFrame a au moins 11 colonnes
+    while df_export.shape[1] < 11:
         df_export[f'Col_{df_export.shape[1] + 1}'] = ""
 
     # 2. Ajouter les titres
-    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" \
-        for i in range(df_export.shape[1] - 4)] + ["Sous total"]
-    df_export.columns = titres[:df_export.shape[1]]  # Ajuster les titres sans erreur d'index
+    titres = ["Code", "Libellé", "Qté", "Col_4", "Col_5", "Col_6", "Col_7", "Col_8", "Sous total", "Col_10", "Col_11"]
+    df_export.columns = titres  # On applique les titres au DataFrame
 
     # 3a Supprimer les lignes où les colonnes A et B sont vides
     df_export = df_export[~(df_export["Code"].isna() | (df_export["Code"] == "")) |
@@ -175,5 +174,13 @@ def modifier_tableau_panneau(df_export):
 
     # Remplacement des NaN par ""
     df_export.fillna("", inplace=True)
+
+    # Déplacement des libellés en colonne K si ce n'est pas un titre
+    # Vérifier si "Sous total" existe avant de commencer
+    if "Sous total" in df_export.columns:
+        for i, row in df_export.iterrows():
+            if row["Sous total"] != "T":
+                df_export.at[i, "Col_11"] = row["Libellé"]  # Déplacement vers Col_11
+                df_export.at[i, "Libellé"] = ""  # Vider la colonne "Libellé" après déplacement
 
     return df_export

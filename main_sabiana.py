@@ -90,7 +90,7 @@ def identifier_fichier(nom_fichier):
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
-    elif "offerta" in nom_fichier:
+    elif "Offerta" in nom_fichier:
         st.write("Fichier détecté : Easysel")
 
         # Module issu de Sabiana.py pour le traitement de données

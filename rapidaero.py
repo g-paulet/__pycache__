@@ -13,8 +13,8 @@ def copier_tableaux_rapid_aero(excel_file):
     for sheet_name in liste_feuilles:
         if sheet_name.endswith("°C"):
             st.write(f"Traitement de la feuille : {sheet_name}")  # Debugging
-
-            df = pd.read_excel(excel_file, sheet_name=sheet_name, header=None)
+            # ajout dtype=str pour éviter le problème de référence 0008314
+            df = pd.read_excel(excel_file, sheet_name=sheet_name, header=None, dtype=str)
 
             # Vérifier que le fichier contient au moins 18 colonnes (jusqu'à la colonne R)
             if df.shape[1] > 17:
@@ -24,15 +24,6 @@ def copier_tableaux_rapid_aero(excel_file):
                 if dern_ligne and dern_ligne >= 1:  # Vérifier qu'il y a bien des données
                     print("Dernière ligne remplie en colonne P :", dern_ligne)
 
-                    # Extraction des colonnes P, Q, R à partir de la ligne 2
-                   # extrait = df.iloc[1:dern_ligne + 1, [15, 16, 17]].copy()
-                    #extrait.columns = ["P", "Q", "R"]
-
-                    # Ajouter le titre de la feuille
-                   # extrait.insert(0, "Titre", f"Aérotherme - {sheet_name}")
-
-                    # Ajouter au résultat final
-                    #resultats.append(extrait)
                 # Créer une liste vide pour stocker les données formatées
                 extrait_liste = []
 
@@ -65,22 +56,16 @@ def mise_en_forme_rapid_aero(df):
     - Ajoute des titres,
     - Supprime les lignes vides.
     """
-    #print("Colonnes présentes dans df:", df.columns)  # Debugging
-    #print(df) # Debugging
 
-    #Ajout des colonnes vides pour matcher la mise en forme Dollibar
-    #df.drop(df.columns[0], axis=1, inplace=True)
-    df.insert(3, "NouvelleCol1", "")
-    df.insert(3, "NouvelleCol2", "")
-    df.insert(3, "NouvelleCol3", "")
-    df.insert(3, "NouvelleCol4", "")
-    df.insert(3, "NouvelleCol5", "")
-    df.insert(3, "NouvelleCol6", "")
+    # S'assurer que le DataFrame a au moins 11 colonnes
+    while df.shape[1] < 11:
+        df[f'Col_{df.shape[1] + 1}'] = ""
 
-    # Renommer correctement les colonnes + swap A et B
-    titres = ["Code", "Libellé", "Qté"] + [f"Col_{i+4}" for i in range(df.shape[1] - 4)] \
-        + ["Sous total"]
-    df.columns = titres
+    # Ajouter les titres
+    titres = ["Code", "Libellé", "Qté", "Col_4", "Col_5", "Col_6", "Col_7", "Col_8", "Sous total", "Col_10", "Col_11"]
+    df.columns = titres  # On applique les titres au DataFrame
+
+    # Swap colonnes A et B
     df[["Code", "Libellé", "Qté"]] = df[["Libellé","Code", "Qté"]]
 
     print("Colonnes dans le df :", titres)
@@ -92,8 +77,13 @@ def mise_en_forme_rapid_aero(df):
     df = df[~(df["Code"].isna() | (df["Code"] == "")) |
             ~(df["Sous total"].isna() | (df["Sous total"] == ""))]
 
-    # Remplir les cellules vides avec des chaînes vides pour éviter les NaN
-    # df.fillna("", inplace=True)
+    # Déplacement des libellés en colonne K si ce n'est pas un titre
+    # Vérifier si "Sous total" existe avant de commencer
+    if "Sous total" in df.columns:
+        for i, row in df.iterrows():
+            if row["Sous total"] != "T":
+                df.at[i, "Col_11"] = row["Libellé"]  # Déplacement vers Col_11
+                df.at[i, "Libellé"] = ""  # Vider la colonne "Libellé"
 
     return df
 # End-of-file (EOF)
