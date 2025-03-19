@@ -168,7 +168,7 @@ def identifier_fichier(nom_fichier):
 
 #Interface Streamlit
 st.image("sabiana-logo.png", use_container_width=True)
-st.title("Outil de conversion des fichiers de sélection vers Magenta")
+st.title("Clic and Selec pour MAGENTA")
 st.subheader("Déposez votre fichier Excel ci-dessous \
     (issu des outils de sélection : Easysel, Rapid'Aéro ou Panneau)")
 

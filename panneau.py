@@ -74,10 +74,10 @@ def traiter_pulsar(df_source, df_export):
         lignes_pulsar.append(["", "", ""])  # Ligne vide pour séparer
         lignes_pulsar.append(["", "Accessoires PULSAR", ""])
 
-    for i, row in df_source.iloc[45:69].iterrows():
-        if pd.notna(row.iloc[col_titre]):  # Vérifier si la cellule contient un code produit
-            # Code produit + quantité
-            lignes_pulsar.append([row.iloc[col_titre], "", row.iloc[col_ref]])
+        for i, row in df_source.iloc[45:69].iterrows():
+            if pd.notna(row.iloc[col_titre]):  # Vérifier si la cellule contient un code produit
+                # Code produit + quantité
+                lignes_pulsar.append([row.iloc[col_titre], "", row.iloc[col_ref]])
 
     # 🔹 Convertir la liste en DataFrame avec les bonnes colonnes
     df_pulsar = pd.DataFrame(lignes_pulsar, columns=colonnes_cibles)
@@ -130,16 +130,18 @@ def traiter_ds18(df_source, df_export):
                     "Libellé": libelle, "Quantité": quantite})
 
     # Traitement des accessoires DS18 (lignes 50 à 79)
-    nouvelles_lignes.append({"Code Produit": "", "Libellé": "Accessoires DS18", "Quantité": ""})
 
-    for i in range(48, 79):
-        if pd.notna(df_source.iloc[i, 0]):
-            code = df_source.iloc[i, 0]
-            libelle = df_source.iloc[i, 1] if pd.notna(df_source.iloc[i, 1]) else ""
-            quantite = df_source.iloc[i, 15] if pd.notna(df_source.iloc[i, 15]) else ""
+    if nouvelles_lignes: #19/03/25 ajout pour éviter que les accessoires DS18 apparaissent si uniquement produit PULSAR
+        nouvelles_lignes.append({"Code Produit": "", "Libellé": "Accessoires DS18", "Quantité": ""})
 
-            nouvelles_lignes.append({"Code Produit": code, \
-             "Libellé": libelle, "Quantité": quantite})
+        for i in range(48, 79):
+            if pd.notna(df_source.iloc[i, 0]):
+                code = df_source.iloc[i, 0]
+                libelle = df_source.iloc[i, 1] if pd.notna(df_source.iloc[i, 1]) else ""
+                quantite = df_source.iloc[i, 15] if pd.notna(df_source.iloc[i, 15]) else ""
+
+                nouvelles_lignes.append({"Code Produit": code, \
+                "Libellé": libelle, "Quantité": quantite})
 
     # Concaténation avec le DataFrame export
     df_export = pd.concat([df_export, pd.DataFrame(nouvelles_lignes)], ignore_index=True)
